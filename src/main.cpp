@@ -4,12 +4,18 @@
 #include "Button.hpp"
 
 
+
+const int matrixSizeX = 500, matrixSizeY = 500;
 int matrixPoseX = 0, matrixPoseY = 0;   
 double cellSize = 30;
-std::array<std::array<bool, 1000>, 1000> matrix;
 
+int generation = 0;
+std::array<std::array<bool, matrixSizeY>, matrixSizeX> matrix;
 
-
+// void drawText(std::string, int posX, int posY, int charSize)
+// {
+//     sf::Text output()
+// }
 void drawMatrix(sf::RenderTarget *target)
 {
     sf::RectangleShape outline(sf::Vector2f(matrix.size() * cellSize+10, matrix[0].size() * cellSize+10));
@@ -41,18 +47,34 @@ bool inInter(int val, int min, int max)
 {
     return min <= val && val <= max;
 }
+void nextStep()
+{
+    std::array<std::array<bool, matrixSizeY>, matrixSizeX> nextGen;
+    for(int i = 0; i < matrix.size(); i++)
+        for(int j = 0; j < matrix[0].size(); j++)
+        {
+            int adjCells = 0;
+            for(int k = -1; k < 2; k++)
+                for(int l = -1; l < 2; l++)
+                    if(!(k == 0 && l == 0) && i+k > -1 && j+l > -1 && i+k < matrix.size()-1 && j+l < matrix[0].size()-1)
+                        if(matrix[i+k][j+l])adjCells++;
+            if(adjCells == 3)nextGen[i][j] = 1;
+            else if(adjCells == 2)nextGen[i][j] = matrix[i][j];
+            else nextGen[i][j] = 0;
+        }
+    matrix = nextGen;
+    generation++;
+}
 int main()
 {
-    int generation = 0;
     bool pause = 1;
-    int delay = 300;
+    int delay = 10;
     int count = 0;
     int mousePrevX = -1, mousePrevY = -1;
     sf::RenderWindow win(sf::VideoMode(800, 600), "Game Of Lag", sf::Style::Close | sf::Style::Titlebar);
     bool mouseL = 0, mouseM = 0, mouseR = 0;
     while (win.isOpen())
     {
-        sf::sleep(sf::milliseconds(1));
         sf::Event event;
         while(win.pollEvent(event))
         {
@@ -101,13 +123,18 @@ int main()
                     switch(event.key.code)
                     {
                         case sf::Keyboard::Space:
-                            pause += 1;
+                            pause = !pause;
                             break;
                         case sf::Keyboard::A:
-                            delay += 50;
+                            if(delay < 50)delay += 1;
                             break;
                         case sf::Keyboard::Q:
-                            delay -= 50;
+                            if(delay > 0)delay -= 1;
+                            break;
+                        case sf::Keyboard::C:
+                            for(int i = 0; i < matrix.size(); i++)
+                                for(int j = 0; j < matrix[i].size(); j++)
+
                             break;
                     }
                     break;
@@ -142,9 +169,9 @@ int main()
             }
         }
 
-
+        if(!pause && count == 0)nextStep();
         repaint(&win);
-        count = count < delay ? count+1 : 0;
+        count = (count < delay) ? count+1 : 0;
     }
     
 }
