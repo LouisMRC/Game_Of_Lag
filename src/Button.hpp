@@ -22,14 +22,26 @@ class Button
         void draw(sf::RenderTarget *target)
         {
             sf::RectangleShape base = sf::RectangleShape(sf::Vector2f(m_SizeX, m_SizeY));
+            base.setPosition(sf::Vector2f(m_PosX, m_PosY));
             base.setFillColor(sf::Color::Black);
             base.setOutlineThickness(3);
             base.setOutlineColor(m_Color);
-            sf::Text
+
+            sf::Font font = sf::Font();
+            font.loadFromFile("Hack-Regular.ttf");
+            sf::Text buttonText(m_Text, font, 30);
+            sf::FloatRect textRect = buttonText.getLocalBounds();
+            buttonText.setOrigin(textRect.left + textRect.width/2.0f, textRect.top  + textRect.height/2.0f);
+            buttonText.setPosition(sf::Vector2f(m_PosX+m_SizeX/2.0f, m_PosY+m_SizeY/2.0f));
+            buttonText.setFillColor(m_Color);
+
+            target->draw(base);
+            target->draw(buttonText);
+
         }
         void setColor(sf::Color newColor)
         {
-            m_Color = newColor
+            m_Color = newColor;
         }
     private:
         int m_PosX, m_PosY, m_SizeX, m_SizeY;
