@@ -2,6 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include <array>
 #include "Button.hpp"
+#include "graphic.hpp"
 
 
 
@@ -10,39 +11,9 @@ int matrixPoseX = 0, matrixPoseY = 0;
 double cellSize = 30;
 
 int generation = 0;
-std::array<std::array<bool, matrixSizeY>, matrixSizeX> matrix;
+std::array<std::array<bool, matrixSizeY>, matrixSizeX> matrix, oldGen;
 
-// void drawText(std::string, int posX, int posY, int charSize)
-// {
-//     sf::Text output()
-// }
-void drawMatrix(sf::RenderTarget *target)
-{
-    sf::RectangleShape outline(sf::Vector2f(matrix.size() * cellSize+10, matrix[0].size() * cellSize+10));
-    outline.setFillColor(sf::Color::Red);
-    outline.setPosition(sf::Vector2f(matrixPoseX-5, matrixPoseY-5));
-    target->draw(outline);
-    for(int i = 0; i < matrix.size(); i++)
-        for(int j = 0; j < matrix[i].size(); j++)
-        {
-            std::array<int, 2> cellPoses = {matrixPoseX+i*(int)cellSize, matrixPoseY+j*(int)cellSize};
-            if((0 < cellPoses[0] || 0 < cellPoses[0]+(int)cellSize) && (cellPoses[0]+(int)cellSize < target->getSize().x || cellPoses[0] < target->getSize().x) && (0 < cellPoses[1] || 0 < cellPoses[1]+(int)cellSize) && (cellPoses[1]+(int)cellSize < target->getSize().y || cellPoses[1] < target->getSize().y))
-            {
-                sf::RectangleShape cell(sf::Vector2f(cellSize, cellSize));
-                cell.setPosition(sf::Vector2f(cellPoses[0], cellPoses[1]));
-                cell.setFillColor(matrix[i][j] ? sf::Color::White : sf::Color::Black);
-                cell.setOutlineThickness(1);
-                cell.setOutlineColor(sf::Color::Red);
-                target->draw(cell);
-            }
-        }
-}
-void repaint(sf::RenderWindow *target)
-{
-    target->clear(sf::Color::Black);
-    drawMatrix(target);
-    target->display();
-}
+
 bool inInter(int val, int min, int max)
 {
     return min <= val && val <= max;
@@ -50,13 +21,13 @@ bool inInter(int val, int min, int max)
 void nextStep()
 {
     std::array<std::array<bool, matrixSizeY>, matrixSizeX> nextGen;
-    for(int i = 0; i < matrix.size(); i++)
-        for(int j = 0; j < matrix[0].size(); j++)
+    for(int i = 0; i < matrixSizeX; i++)
+        for(int j = 0; j < matrixSizeY; j++)
         {
             int adjCells = 0;
             for(int k = -1; k < 2; k++)
                 for(int l = -1; l < 2; l++)
-                    if(!(k == 0 && l == 0) && i+k > -1 && j+l > -1 && i+k < matrix.size()-1 && j+l < matrix[0].size()-1)
+                    if(!(k == 0 && l == 0) && i+k > -1 && j+l > -1 && i+k < matrixSizeX-1 && j+l < matrixSizeY-1)
                         if(matrix[i+k][j+l])adjCells++;
             if(adjCells == 3)nextGen[i][j] = 1;
             else if(adjCells == 2)nextGen[i][j] = matrix[i][j];
@@ -73,6 +44,7 @@ int main()
     int mousePrevX = -1, mousePrevY = -1;
     sf::RenderWindow win(sf::VideoMode(800, 600), "Game Of Lag", sf::Style::Close | sf::Style::Titlebar);
     bool mouseL = 0, mouseM = 0, mouseR = 0;
+    repaint(&win);
     while (win.isOpen())
     {
         sf::Event event;
@@ -109,15 +81,17 @@ int main()
                     {
                         case sf::Mouse::Left:
                             mouseL = 1;
+                            draw(&win);
                             break;
                         case sf::Mouse::Middle:
                             mouseM = 1;
+                            repaint(&win);
                             break;
                         case sf::Mouse::Right:
                             mouseR = 1;
+                            draw(&win);
                             break;
                     }
-                    repaint(&win);
                     break;
                 case sf::Event::KeyPressed:
                     switch(event.key.code)
@@ -133,7 +107,7 @@ int main()
                             break;
                         case sf::Keyboard::C:
                             for(int i = 0; i < matrix.size(); i++)
-                                for(int j = 0; j < matrix[i].size(); j++)
+                                for(int j = 0; j < matrix[i].size(); j++)matrix[i][j] = 0;
 
                             break;
                     }
@@ -170,8 +144,7 @@ int main()
         }
 
         if(!pause && count == 0)nextStep();
-        repaint(&win);
-        count = (count < delay) ? count+1 : 0;
+        draw(&win);
     }
     
 }
