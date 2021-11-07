@@ -1,78 +1,68 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include <array>
-#include "Button.hpp"
+#include "matrix.hpp"
 
+#define GAME_WIDTH 1000
+#define GAME_HEIGHT 1000
 
-
-const int matrixSizeX = 500, matrixSizeY = 500;
-int matrixPoseX = 0, matrixPoseY = 0;   
-double cellSize = 30;
-
-int generation = 0;
-std::array<std::array<bool, matrixSizeY>, matrixSizeX> matrix;
 
 // void drawText(std::string, int posX, int posY, int charSize)
 // {
 //     sf::Text output()
 // }
-void drawMatrix(sf::RenderTarget *target)
+template <int size_x, int size_y>
+void drawMatrix(sf::RenderTarget *target, Matrix<size_x, size_y> matrix)
 {
-    sf::RectangleShape outline(sf::Vector2f(matrix.size() * cellSize+10, matrix[0].size() * cellSize+10));
-    outline.setFillColor(sf::Color::Red);
-    outline.setPosition(sf::Vector2f(matrixPoseX-5, matrixPoseY-5));
-    target->draw(outline);
-    for(int i = 0; i < matrix.size(); i++)
-        for(int j = 0; j < matrix[i].size(); j++)
+    for(int i = 0; i < matrix.getSizeX(); i++)
+        for(int j = 0; j < matrix.getSizeY(); j++)if(matrix.get(i, j))
         {
-            std::array<int, 2> cellPoses = {matrixPoseX+i*(int)cellSize, matrixPoseY+j*(int)cellSize};
-            if((0 < cellPoses[0] || 0 < cellPoses[0]+(int)cellSize) && (cellPoses[0]+(int)cellSize < target->getSize().x || cellPoses[0] < target->getSize().x) && (0 < cellPoses[1] || 0 < cellPoses[1]+(int)cellSize) && (cellPoses[1]+(int)cellSize < target->getSize().y || cellPoses[1] < target->getSize().y))
+            std::array<int, 2> cellPoses = {matrix.getPosX()+i*(int)matrix.getCellSize(), matrix.getPosY()+j*(int)matrix.getCellSize()};
+            if((0 < cellPoses[0] || 0 < cellPoses[0]+(int)matrix.getCellSize()) && (cellPoses[0]+(int)matrix.getCellSize() < target->getSize().x || cellPoses[0] < target->getSize().x) && (0 < cellPoses[1] || 0 < cellPoses[1]+(int)matrix.getCellSize()) && (cellPoses[1]+(int)matrix.getCellSize() < target->getSize().y || cellPoses[1] < target->getSize().y))
             {
-                sf::RectangleShape cell(sf::Vector2f(cellSize, cellSize));
-                cell.setPosition(sf::Vector2f(cellPoses[0], cellPoses[1]));
-                cell.setFillColor(matrix[i][j] ? sf::Color::White : sf::Color::Black);
-                cell.setOutlineThickness(1);
-                cell.setOutlineColor(sf::Color::Red);
+                sf::RectangleShape cell(sf::Vector2f((int)matrix.getCellSize()-2, (int)matrix.getCellSize()-2));
+                cell.setPosition(sf::Vector2f(cellPoses[0]+1, cellPoses[1]+1));
+                cell.setFillColor(sf::Color::White);
                 target->draw(cell);
             }
         }
+    
+    for(int i = 0; i < matrix.getSizeX()+1; i++)if((0 < matrix.getPosX()+i*(int)matrix.getCellSize() || 0 < matrix.getPosX()+i*(int)matrix.getCellSize()+2) && (matrix.getPosX()+i*(int)matrix.getCellSize() < target->getSize().x || matrix.getPosX()+i*(int)matrix.getCellSize()+2 < target->getSize().x))
+    {
+        sf::RectangleShape line(sf::Vector2f(2, matrix.getSizeY()*(int)matrix.getCellSize()));
+        line.setPosition(sf::Vector2f(matrix.getPosX()+i*(int)matrix.getCellSize()-1, matrix.getPosY()));
+        line.setFillColor(sf::Color(255, 255, 255, 64));
+        target->draw(line);
+    }
+    for(int i = 0; i < matrix.getSizeY()+1; i++)if((0 < matrix.getPosY()+i*(int)matrix.getCellSize() || 0 < matrix.getPosY()+i*(int)matrix.getCellSize()+2) && (matrix.getPosY()+i*(int)matrix.getCellSize() < target->getSize().y || matrix.getPosY()+i*(int)matrix.getCellSize()+2 < target->getSize().y))
+    {
+        sf::RectangleShape line(sf::Vector2f(matrix.getSizeX()*(int)matrix.getCellSize(), 2));
+        line.setPosition(sf::Vector2f(matrix.getPosX(), matrix.getPosY()+i*(int)matrix.getCellSize()-1));
+        line.setFillColor(sf::Color(255, 255, 255, 64));
+        target->draw(line);
+    }
 }
-void repaint(sf::RenderWindow *target)
+template <int size_x, int size_y>
+void repaint(sf::RenderWindow *target, Matrix<size_x, size_y> matrix)
 {
     target->clear(sf::Color::Black);
-    drawMatrix(target);
+    drawMatrix<size_x, size_y>(target, matrix);
     target->display();
 }
 bool inInter(int val, int min, int max)
 {
     return min <= val && val <= max;
 }
-void nextStep()
-{
-    std::array<std::array<bool, matrixSizeY>, matrixSizeX> nextGen;
-    for(int i = 0; i < matrix.size(); i++)
-        for(int j = 0; j < matrix[0].size(); j++)
-        {
-            int adjCells = 0;
-            for(int k = -1; k < 2; k++)
-                for(int l = -1; l < 2; l++)
-                    if(!(k == 0 && l == 0) && i+k > -1 && j+l > -1 && i+k < matrix.size()-1 && j+l < matrix[0].size()-1)
-                        if(matrix[i+k][j+l])adjCells++;
-            if(adjCells == 3)nextGen[i][j] = 1;
-            else if(adjCells == 2)nextGen[i][j] = matrix[i][j];
-            else nextGen[i][j] = 0;
-        }
-    matrix = nextGen;
-    generation++;
-}
 int main()
 {
+    sf::RenderWindow win(sf::VideoMode(800, 600), "Game Of Lag", sf::Style::Default);
+    Matrix<GAME_WIDTH, GAME_HEIGHT> matrix;
     bool pause = 1;
     int delay = 10;
     int count = 0;
     int mousePrevX = -1, mousePrevY = -1;
-    sf::RenderWindow win(sf::VideoMode(800, 600), "Game Of Lag", sf::Style::Close | sf::Style::Titlebar);
     bool mouseL = 0, mouseM = 0, mouseR = 0;
+
     while (win.isOpen())
     {
         sf::Event event;
@@ -84,9 +74,9 @@ int main()
                     win.close();
                     break;
                 case sf::Event::MouseWheelScrolled:
-                    cellSize += event.mouseWheelScroll.delta*(cellSize/10);
-                    if(cellSize < 5)cellSize = 5;
-                    else if(cellSize > 100) cellSize = 100;
+                    matrix.resize(matrix.getCellSize() + event.mouseWheelScroll.delta*(matrix.getCellSize()/10));
+                    if(matrix.getCellSize() < 5) matrix.resize(5);
+                    else if(matrix.getCellSize() > 100) matrix.resize(100);
                     break;
                 case sf::Event::MouseButtonReleased:
                     switch(event.mouseButton.button)
@@ -117,60 +107,60 @@ int main()
                             mouseR = 1;
                             break;
                     }
-                    repaint(&win);
+                    repaint<GAME_WIDTH, GAME_HEIGHT>(&win, matrix);
                     break;
                 case sf::Event::KeyPressed:
                     switch(event.key.code)
                     {
-                        case sf::Keyboard::Space:
+                        case sf::Keyboard::Space://pause!!
                             pause = !pause;
                             break;
-                        case sf::Keyboard::A:
+                        case sf::Keyboard::A://slow down the game
                             if(delay < 50)delay += 1;
                             break;
-                        case sf::Keyboard::Q:
+                        case sf::Keyboard::Q://speed up the game
                             if(delay > 0)delay -= 1;
                             break;
-                        case sf::Keyboard::C:
-                            for(int i = 0; i < matrix.size(); i++)
-                                for(int j = 0; j < matrix[i].size(); j++)
-
+                        case sf::Keyboard::C://remove every cells
+                            matrix.clear();
                             break;
                     }
+                    break;
+                case sf::Event::Resized:
+                    sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
+                    win.setView(sf::View(visibleArea));
                     break;
             }
         }
 
         if(mouseL)
         {
-            if(inInter(sf::Mouse::getPosition(win).x, matrixPoseX, matrixPoseX+matrix.size()*(int)cellSize) && inInter(sf::Mouse::getPosition(win).y, matrixPoseY, matrixPoseY+matrix[0].size()*(int)cellSize))
+            if(inInter(sf::Mouse::getPosition(win).x, matrix.getPosX(), matrix.getPosX()+matrix.getSizeX()*(int)matrix.getCellSize()) && inInter(sf::Mouse::getPosition(win).y, matrix.getPosY(), matrix.getPosY()+matrix.getSizeY()*(int)matrix.getCellSize()))
             { 
-                std::array<int, 2> cell = {(sf::Mouse::getPosition(win).x-matrixPoseX)/((int)cellSize), (sf::Mouse::getPosition(win).y-matrixPoseY)/((int)cellSize)};
-                if(!matrix[cell[0]][cell[1]])matrix[cell[0]][cell[1]]=1;
+                std::array<int, 2> cell = {(sf::Mouse::getPosition(win).x-matrix.getPosX())/((int)matrix.getCellSize()), (sf::Mouse::getPosition(win).y-matrix.getPosY())/((int)matrix.getCellSize())};
+                if(!matrix.get(cell[0], cell[1]))matrix.set(cell[0], cell[1], 1);
             }
             
         }
         if(mouseM)
         {
             if(mousePrevX != -1 && mousePrevY != -1)
-            {
-                matrixPoseX += sf::Mouse::getPosition(win).x - mousePrevX;
-                matrixPoseY += sf::Mouse::getPosition(win).y - mousePrevY;
-            }
+                matrix.move(matrix.getPosX() + sf::Mouse::getPosition(win).x - mousePrevX, matrix.getPosY() + sf::Mouse::getPosition(win).y - mousePrevY);
+
             mousePrevX = sf::Mouse::getPosition(win).x;
             mousePrevY = sf::Mouse::getPosition(win).y;
         }
         if(mouseR)
         {
-            if(inInter(sf::Mouse::getPosition(win).x, matrixPoseX, matrixPoseX+matrix.size()*(int)cellSize) && inInter(sf::Mouse::getPosition(win).y, matrixPoseY, matrixPoseY+matrix[0].size()*(int)cellSize))
+            if(inInter(sf::Mouse::getPosition(win).x, matrix.getPosX(), matrix.getPosX()+matrix.getSizeX()*(int)matrix.getCellSize()) && inInter(sf::Mouse::getPosition(win).y, matrix.getPosY(), matrix.getPosY()+matrix.getSizeY()*(int)matrix.getCellSize()))
             { 
-                std::array<int, 2> cell = {(sf::Mouse::getPosition(win).x-matrixPoseX)/((int)cellSize), (sf::Mouse::getPosition(win).y-matrixPoseY)/((int)cellSize)};
-                if(matrix[cell[0]][cell[1]])matrix[cell[0]][cell[1]]=0;
+                std::array<int, 2> cell = {(sf::Mouse::getPosition(win).x-matrix.getPosX())/((int)matrix.getCellSize()), (sf::Mouse::getPosition(win).y-matrix.getPosY())/((int)matrix.getCellSize())};
+                if(matrix.get(cell[0], cell[1]))matrix.set(cell[0], cell[1], 0);
             }
         }
 
-        if(!pause && count == 0)nextStep();
-        repaint(&win);
+        if(!pause && count == 0)matrix.nextGen();
+        repaint<GAME_WIDTH, GAME_HEIGHT>(&win, matrix);
         count = (count < delay) ? count+1 : 0;
     }
     
